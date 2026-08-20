@@ -1,0 +1,85 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Disaster recovery — hot standby pair
+#
+#   srv-primary (us-east-1)  ◀── replication ──▶  srv-standby (us-west-2)
+#
+#   On 15 s of unreachable heartbeats, auto-migrate every cell to the
+#   standby. All cells are treated as critical (quorum=2).
+# ════════════════════════════════════════════════════════════════════════════
+
+fleet:
+  id: dr-pair
+  region: us-east-1
+
+discovery:
+  bonjour: false
+  static: ./disaster-recovery.yaml
+
+migration:
+  triggerOnUnreachable: true
+  unreachableAfterMs: 15_000
+  verify: true
+  rollbackOnFailure: true
+  phaseTimeoutMs: 5_000
+  totalTimeoutMs: 60_000
+
+quorum:
+  default: 2
+  critical: '*'   # all cells are critical in DR
+
+scaling:
+  name: passive        # no auto-scaling in DR; the standby is pre-provisioned
+
+health:
+  intervalMs: 2_000
+  timeoutMs: 1_000
+  missedBeforeUnreachable: 3
+
+routing:
+  preferLocality: true
+  localityHint: us-east-1
+  tierPreference: [5]
+
+instances:
+  - name: srv-primary
+    tier: server
+    endpoint: grpc://srv-primary.us-east-1.internal:7070
+    transport: grpc
+    region: us-east-1
+    role: primary
+    labels: { role: primary, site: iad1 }
+    capabilities:
+      ram_mb: 131072
+      cpu_cores: 32
+      storage_bytes: 10995116277760
+      tpm: true
+
+  - name: srv-standby
+    tier: server
+    endpoint: grpc://srv-standby.us-west-2.internal:7070
+    transport: grpc
+    region: us-west-2
+    role: standby
+    labels: { role: standby, site: pdx1 }
+    capabilities:
+      ram_mb: 131072
+      cpu_cores: 32
+      storage_bytes: 10995116277760
+      tpm: true
+
+# ── Failover plan ──────────────────────────────────────────────────────
+# When srv-primary misses 3 heartbeats, the fleet:
+#   1. marks srv-primary `unreachable`
+#   2. issues a migration for every owned cell to srv-standby
+#   3. flips the registry to point new queries at srv-standby
+#   4. leaves srv-primary registered (so it can rejoin cleanly)
+#
+# No explicit `failover` declaration is needed — the migration
+# coordinator and the health monitor handle it automatically.
+failover:
+  trigger: heartbeat_loss
+  misses: 3
+  target: srv-standby
+  notify:
+    - pagerduty://quilt-prod
+    - slack://#quilt-alerts

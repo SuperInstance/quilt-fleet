@@ -1,0 +1,121 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Home IoT — single home, 5 ESP32 sensors + 1 Jetson aggregator + 1 server
+#            + 1 Cloudflare Worker for the dashboard
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Topology
+# --------
+#  ESP32s (MQTT) ──▶ Jetson (WS, aggregates) ──▶ Server (gRPC, archival)
+#                                │
+#                                └──▶ Cloudflare Worker (HTTPS, dashboard)
+#
+# Run with:   quilt-fleet serve --config ./home-iot.yaml
+# ════════════════════════════════════════════════════════════════════════════
+
+fleet:
+  id: home-main
+  region: us-east-1
+
+discovery:
+  bonjour: true              # ESP32s advertise on the LAN
+  static: ./home-iot.yaml    # pin server and cloudflare endpoints
+
+quorum:
+  default: 1
+  critical:
+    - sensors.smoke
+    - safety.eStop
+    - vault.lock
+
+scaling:
+  name: load
+  threshold: 50
+  min: 1
+  max: 3
+
+health:
+  intervalMs: 5000
+  timeoutMs: 1500
+  degradedLatencyMs: 250
+
+routing:
+  preferLocality: true
+  loadBalance: least_loaded
+  tierPreference: [1, 2, 5]  # try ESP32, then Jetson, then Server
+
+instances:
+  # ── Tier 1: ESP32 sensors ───────────────────────────────────────────
+  - name: esp32-living-1
+    tier: esp32
+    endpoint: mqtt://10.0.0.21:1883
+    transport: mqtt
+    labels: { room: living, kind: temp }
+
+  - name: esp32-living-2
+    tier: esp32
+    endpoint: mqtt://10.0.0.22:1883
+    transport: mqtt
+    labels: { room: living, kind: motion }
+
+  - name: esp32-kitchen
+    tier: esp32
+    endpoint: mqtt://10.0.0.23:1883
+    transport: mqtt
+    labels: { room: kitchen, kind: temp }
+
+  - name: esp32-bedroom
+    tier: esp32
+    endpoint: mqtt://10.0.0.24:1883
+    transport: mqtt
+    labels: { room: bedroom, kind: lux }
+
+  - name: esp32-garage
+    tier: esp32
+    endpoint: mqtt://10.0.0.25:1883
+    transport: mqtt
+    labels: { room: garage, kind: door }
+
+  # ── Tier 2: Jetson aggregator ──────────────────────────────────────
+  - name: jetson-orin-1
+    tier: jetson
+    endpoint: http://jetson.lan:4040
+    transport: ws
+    region: us-east-1
+    capabilities:
+      cuda: true
+      ram_mb: 16384
+      cpu_cores: 8
+
+  # ── Tier 4: Cloudflare dashboard ───────────────────────────────────
+  - name: cf-edge
+    tier: cloudflare
+    endpoint: https://quilt-home.workers.dev
+    transport: http
+    region: us-east-1
+
+  # ── Tier 5: NAS / server for archival ──────────────────────────────
+  - name: nas-primary
+    tier: server
+    endpoint: grpc://nas.lan:7070
+    transport: grpc
+    region: us-east-1
+    capabilities:
+      ram_mb: 32768
+      cpu_cores: 8
+      storage_bytes: 1099511627776   # 1 TiB
+
+# ── Per-cell hints ─────────────────────────────────────────────────────
+cells:
+  sensors.temperature: { tierPreference: [esp32, jetson, server] }
+  sensors.motion:      { tierPreference: [esp32, jetson] }
+  sensors.smoke:       { tierPreference: [esp32, server], critical: true }
+  safety.eStop:        { tierPreference: [server, esp32],   critical: true }
+  vault.lock:          { tierPreference: [server],          critical: true }
+  inference.detections:{ tierPreference: [jetson, server] }
+  edge.session:        { tierPreference: [cloudflare, server] }
+
+# ── Dashboard subscription (for the cf-edge Worker) ───────────────────
+subscriptions:
+  - { uri: 'quilt://jetson-orin-1/sensors#temperature',     to: cf-edge }
+  - { uri: 'quilt://jetson-orin-1/sensors#motion',         to: cf-edge }
+  - { uri: 'quilt://jetson-orin-1/safety#eStop',           to: cf-edge }

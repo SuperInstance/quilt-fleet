@@ -1,0 +1,46 @@
+# CODEOWNERS — quilt-fleet
+# Each line is a file pattern followed by one or more owners.
+# Order matters: later patterns override earlier ones.
+#
+# These owners will be automatically requested for review when a pull
+# request touches the matched files.
+
+# Default owners for everything in this repository
+*                       @superinstance/fleet-maintainers
+
+# Core orchestration logic needs sign-off from the protocol team
+/src/fleet.ts          @superinstance/fleet-maintainers @superinstance/protocol-team
+/src/registry.ts       @superinstance/fleet-maintainers
+/src/discovery.ts      @superinstance/fleet-maintainers @superinstance/network-team
+/src/subscription.ts   @superinstance/fleet-maintainers
+/src/quorum.ts         @superinstance/fleet-maintainers @superinstance/consensus-team
+/src/migration.ts      @superinstance/fleet-maintainers
+/src/routing.ts        @superinstance/fleet-maintainers
+/src/scaling.ts        @superinstance/fleet-maintainers
+
+# Tier-specific adapters need input from the platform owners
+/src/tiers/esp32.ts        @superinstance/fleet-maintainers @superinstance/embedded-team
+/src/tiers/jetson.ts       @superinstance/fleet-maintainers @superinstance/edge-team
+/src/tiers/codespace.ts    @superinstance/fleet-maintainers @superinstance/dev-platform
+/src/tiers/cloudflare.ts   @superinstance/fleet-maintainers @superinstance/edge-team
+/src/tiers/server.ts       @superinstance/fleet-maintainers
+
+# Transport adapters
+/src/transports/http.ts       @superinstance/fleet-maintainers
+/src/transports/websocket.ts  @superinstance/fleet-maintainers
+/src/transports/mqtt.ts       @superinstance/fleet-maintainers
+/src/transports/nats.ts       @superinstance/fleet-maintainers
+
+# API surfaces
+/src/api/rest.ts     @superinstance/fleet-maintainers
+/src/api/graphql.ts  @superinstance/fleet-maintainers
+/src/api/grpc.ts     @superinstance/fleet-maintainers
+
+# CI, build, release
+/.github/            @superinstance/dev-platform
+/package.json        @superinstance/fleet-maintainers
+/tsconfig.json       @superinstance/fleet-maintainers
+
+# Documentation
+/docs/               @superinstance/fleet-maintainers
+/README.md           @superinstance/fleet-maintainers

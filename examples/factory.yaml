@@ -1,0 +1,80 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Factory floor — 10 Jetsons on the line + 1 analytics server
+#
+#   Jetson 1..10 (gRPC) ──▶ Analytics server (gRPC, archival + dashboards)
+#
+#   Quorum on every safety-critical cell.
+#   Strict latency budget: any p95 above 250 ms triggers an alert.
+# ════════════════════════════════════════════════════════════════════════════
+
+fleet:
+  id: factory-line-3
+  region: us-central-2
+
+discovery:
+  bonjour: false
+  static: ./factory.yaml
+
+quorum:
+  default: 3
+  critical:
+    - safety.eStop
+    - safety.lightCurtain
+    - plc.emergency
+    - quality.rejectedCount
+    - plc.conveyorState
+
+scaling:
+  name: load
+  threshold: 200
+  min: 10
+  max: 14
+  cooldownMs: 30_000
+
+health:
+  intervalMs: 2000
+  timeoutMs: 500
+  degradedLatencyMs: 100
+  unreachableLatencyMs: 1000
+
+routing:
+  loadBalance: least_loaded
+  tierPreference: [2, 5]   # prefer Jetson, fall back to server
+
+instances:
+  # ── Tier 2: 10 Jetsons ─────────────────────────────────────────────
+  - { name: line3-jetson-1,  tier: jetson, endpoint: grpc://line3-1.factory.internal:4040,  region: us-central-2 }
+  - { name: line3-jetson-2,  tier: jetson, endpoint: grpc://line3-2.factory.internal:4040,  region: us-central-2 }
+  - { name: line3-jetson-3,  tier: jetson, endpoint: grpc://line3-3.factory.internal:4040,  region: us-central-2 }
+  - { name: line3-jetson-4,  tier: jetson, endpoint: grpc://line3-4.factory.internal:4040,  region: us-central-2 }
+  - { name: line3-jetson-5,  tier: jetson, endpoint: grpc://line3-5.factory.internal:4040,  region: us-central-2 }
+  - { name: line3-jetson-6,  tier: jetson, endpoint: grpc://line3-6.factory.internal:4040,  region: us-central-2 }
+  - { name: line3-jetson-7,  tier: jetson, endpoint: grpc://line3-7.factory.internal:4040,  region: us-central-2 }
+  - { name: line3-jetson-8,  tier: jetson, endpoint: grpc://line3-8.factory.internal:4040,  region: us-central-2 }
+  - { name: line3-jetson-9,  tier: jetson, endpoint: grpc://line3-9.factory.internal:4040,  region: us-central-2 }
+  - { name: line3-jetson-10, tier: jetson, endpoint: grpc://line3-10.factory.internal:4040, region: us-central-2 }
+
+  # ── Tier 5: Analytics ─────────────────────────────────────────────
+  - name: server-analytics
+    tier: server
+    endpoint: grpc://analytics.factory.internal:7070
+    transport: grpc
+    region: us-central-2
+    capabilities:
+      ram_mb: 131072
+      cpu_cores: 32
+      storage_bytes: 10995116277760   # 10 TiB NVMe RAID
+      tpm: true
+
+cells:
+  safety.eStop:         { critical: true,  tierPreference: [jetson, server], quorum: 3 }
+  safety.lightCurtain:  { critical: true,  tierPreference: [jetson, server], quorum: 3 }
+  plc.emergency:        { critical: true,  tierPreference: [jetson, server], quorum: 3 }
+  plc.conveyorState:    { critical: true,  tierPreference: [jetson, server], quorum: 3 }
+  quality.rejectedCount:{ critical: true,  tierPreference: [server],         quorum: 3 }
+  inference.detections: { tierPreference: [jetson] }
+  inference.ocr:        { tierPreference: [jetson] }
+  metrics.throughput:   { tierPreference: [jetson, server] }
+
+subscriptions:
+  - { uri: 'quilt://server-analytics/quality#rejectedCount', to: server-analytics }

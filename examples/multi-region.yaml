@@ -1,0 +1,67 @@
+# ════════════════════════════════════════════════════════════════════════════
+# Multi-region — 3 regions, each with a Cloudflare + server pair
+#
+# Reads stay regional; writes are replicated globally with quorum.
+# ════════════════════════════════════════════════════════════════════════════
+
+fleet:
+  id: multi-region
+  region: global
+
+discovery:
+  bonjour: false
+  static: ./multi-region.yaml
+
+routing:
+  preferLocality: true
+  localityKey: region
+  loadBalance: fastest
+  tierPreference: [4, 5]   # CF for reads, server for writes
+
+quorum:
+  default: 2
+  critical:
+    - vault.lock
+    - auth.token
+    - billing.invoice
+
+scaling:
+  name: reactive
+  threshold: 100
+  min: 1
+  max: 6
+
+health:
+  intervalMs: 5000
+  timeoutMs: 2000
+
+migration:
+  triggerOnUnreachable: true
+  unreachableAfterMs: 15_000
+  verify: true
+  rollbackOnFailure: true
+
+instances:
+  # US-EAST-1
+  - { name: cf-us,   tier: cloudflare, endpoint: https://quilt-us.example.workers.dev, region: us-east-1 }
+  - { name: srv-us,  tier: server,     endpoint: grpc://srv-us.internal:7070,           region: us-east-1 }
+
+  # EU-WEST-1
+  - { name: cf-eu,   tier: cloudflare, endpoint: https://quilt-eu.example.workers.dev, region: eu-west-1 }
+  - { name: srv-eu,  tier: server,     endpoint: grpc://srv-eu.internal:7070,           region: eu-west-1 }
+
+  # AP-SOUTH-1
+  - { name: cf-apac, tier: cloudflare, endpoint: https://quilt-apac.example.workers.dev, region: ap-south-1 }
+  - { name: srv-apac, tier: server,     endpoint: grpc://srv-apac.internal:7070,          region: ap-south-1 }
+
+cells:
+  edge.session:  { tierPreference: [cloudflare], locality: any }
+  vault.lock:    { tierPreference: [server],     critical: true, quorum: 3 }
+  auth.token:    { tierPreference: [server],     critical: true, quorum: 3 }
+  billing.invoice: { tierPreference: [server],  critical: true, quorum: 3 }
+  user.profile:  { tierPreference: [cloudflare, server] }
+
+subscriptions:
+  - { uri: 'quilt://srv-us/vault#lock',   to: cf-us }
+  - { uri: 'quilt://srv-us/vault#lock',   to: cf-eu }
+  - { uri: 'quilt://srv-us/vault#lock',   to: cf-apac }
