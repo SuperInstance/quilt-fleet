@@ -212,6 +212,21 @@ See [`QUILT_ENGINEERING_BAR.md`](../QUILT_ENGINEERING_BAR.md) for the full bar.
 
 ---
 
+## ✦ Cross-Pollination
+
+The fleet layer is the same idea in 12 different language communities. Federation is the original PLATO pattern (every cell in a room was visible to every other user in 1970), reinvented as a 2020s feature. The polyformalism shows this lineage:
+
+- [`quilt-tutor` (1970 PLATO)](https://github.com/SuperInstance/quilt-tutor) — the original multi-user federation. Every cell in a room was visible to every user. Federation wasn't a feature; it was the architecture.
+- [`quilt-mesh`](https://github.com/SuperInstance/quilt-mesh) — the CRDT peer-to-peer federation layer. Same idea, modern implementation.
+- [`quilt-pydantic-ai`](https://github.com/SuperInstance/quilt-pydantic-ai) — typed sheets that federate across instances, with the Pydantic schema as the wire format.
+- [`quilt-swarm`](https://github.com/SuperInstance/quilt-swarm) — fleet-aware container orchestration, 28 tests.
+- [`quilt-nomad`](https://github.com/SuperInstance/quilt-nomad) — fleet-aware job scheduling, 14 tests.
+- [`quilt-k3s`](https://github.com/SuperInstance/quilt-k3s) — fleet-resilience testing, 5 chaos scenarios, 34 tests.
+
+The polyformalism insight: federation is a 55-year-old idea. The fleet isn't new. It's the original pattern, restored.
+
+---
+
 ## ✦ License
 
 Apache-2.0 — see [`LICENSE`](./LICENSE).
