@@ -113,8 +113,12 @@ export class Router {
   }
 
   private candidates(ref: CellRef | string, policy: RoutePolicy): Instance[] {
+    // Include 'unknown' too: instances start as 'unknown' and only
+    // get health-classified after the first probe tick. A pool that
+    // only includes 'healthy'|'degraded' is empty on a fresh boot
+    // and the router returns null for every request.
     const all = this.reg.list({
-      status: ['healthy', 'degraded'],
+      status: ['healthy', 'degraded', 'unknown'],
     });
     if (all.length === 0) return [];
     // tier preference

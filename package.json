@@ -25,8 +25,6 @@
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.10.0",
-    "@quilt/core": "^0.1.0",
-    "@quilt/sdk": "^0.1.0",
     "axios": "^1.6.0",
     "bonjour-service": "^1.2.0",
     "express": "^4.18.0",
