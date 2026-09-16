@@ -122,7 +122,10 @@ export class QuorumCoordinator extends EventEmitter<QuorumEvents> {
    *  healthy instance that owns the cell, then peers. */
   pickReplicas(ref: CellRef, n: number): Instance[] {
     if (!this.reg) throw new Error('quorum not bound');
-    const all = this.reg.list({ status: ['healthy', 'degraded'] });
+    // Include 'unknown' too: instances start as 'unknown' before
+    // the first health probe tick. A quorum of only 'healthy'|'degraded'
+    // is empty on a fresh boot.
+    const all = this.reg.list({ status: ['healthy', 'degraded', 'unknown'] });
     // The instance named in the URI is the primary; we then fill
     // with the lowest-latency healthy peers on a *different* tier.
     const primary = this.reg.byInstanceName(ref.instance);

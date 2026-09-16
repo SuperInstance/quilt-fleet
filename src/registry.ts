@@ -359,7 +359,9 @@ export class Registry extends EventEmitter<RegistryEvents> {
     // We don't track per-cell ownership at the registry level (that's
     // the routing layer's job). We instead return all healthy
     // instances in tier order. The router will narrow it down.
-    return this.list({ status: ['healthy', 'degraded'] })
+    // Include 'unknown' too: instances start as 'unknown' before
+    // the first health probe tick.
+    return this.list({ status: ['healthy', 'degraded', 'unknown'] })
       .sort((a, b) => a.tier - b.tier || a.latencyMs - b.latencyMs);
   }
 

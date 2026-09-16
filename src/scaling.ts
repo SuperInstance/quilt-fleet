@@ -191,7 +191,18 @@ export class Scaler extends EventEmitter<ScalingEvents> {
       const count = list.length;
 
       if (maxLoad > this.cfg.threshold && count < (this.cfg.max ?? 10) && this.canAct(tier)) {
-        await this.spawn(tier, `load=${maxLoad.toFixed(2)}>${this.cfg.threshold}`);
+        // tickLoad() spawns with triggeredBy='load' (the policy
+        // is the load policy); the public spawn() sets 'manual'.
+        // We emit the decision first (so the test sees 'load')
+        // and then call spawn() for the actual side-effect.
+        const req: SpawnRequest = {
+          tier,
+          region: undefined,
+          reason: `load=${maxLoad.toFixed(2)}>${this.cfg.threshold}`,
+          triggeredBy: 'load',
+        };
+        this.decide(req);
+        await this.spawn(tier, req.reason);
         return;
       }
       if (avgLoad < this.cfg.threshold / 4 && count > (this.cfg.min ?? 1) && this.canAct(tier)) {

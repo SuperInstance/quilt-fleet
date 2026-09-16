@@ -50,6 +50,7 @@ import { QuorumCoordinator, type QuorumConfig, type QuorumTransport } from './qu
 import { MigrationCoordinator, type MigrationConfig, type MigrationTransport } from './migration';
 import { Router, type RoutePolicy } from './routing';
 import { Scaler, type ScalingPolicy } from './scaling';
+import { NoopCellTransport, NoopQuorumTransport, NoopMigrationTransport } from './noop_transports';
 import { CellRef, parseQuiltUri } from './types';
 
 /* ─── config ────────────────────────────────────────────────────────── */
@@ -129,15 +130,19 @@ export class FleetManager extends EventEmitter<FleetEvents> {
     this.running = true;
 
     // Bind subsystems to the registry first so discovery events flow.
-    if (this.cfg.transport?.cell) {
-      this.subscriptions.bind(this.registry, this.router, this.cfg.transport.cell);
-    }
-    if (this.cfg.transport?.quorum) {
-      this.quorum.bind(this.registry, this.cfg.transport.quorum);
-    }
-    if (this.cfg.transport?.migration) {
-      this.migration.bind(this.registry, this.cfg.transport.migration);
-    }
+    // Use a no-op transport if the user didn't supply one, so
+    // subscribers/scalers/migration can still be used in unit tests
+    // and in offline CLI flows.
+    const cellTransport = this.cfg.transport?.cell
+      ?? new NoopCellTransport();
+    const quorumTransport = this.cfg.transport?.quorum
+      ?? new NoopQuorumTransport();
+    const migrationTransport = this.cfg.transport?.migration
+      ?? new NoopMigrationTransport();
+
+    this.subscriptions.bind(this.registry, this.router, cellTransport);
+    this.quorum.bind(this.registry, quorumTransport);
+    this.migration.bind(this.registry, migrationTransport);
 
     this.health.bind(this.registry);
     this.scaler.bind(this.registry, this.health);
