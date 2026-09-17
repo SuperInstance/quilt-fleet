@@ -28,15 +28,19 @@ describe('Discovery', () => {
       '  - { name: j-1,   tier: jetson,     endpoint: http://j:4040 }',
       '  - { name: e-1,   tier: esp32,      endpoint: mqtt://e:1883 }',
     ].join('\n'), 'utf8');
+
     const d = new Discovery({ static: file });
     const up: any[] = [];
+    d.on('error', () => {});  // silence unhandled rejection warnings
     d.on('up', (i) => up.push(i));
+
     await d.start();
+
     // allow the static backend to load
     await new Promise(r => setTimeout(r, 50));
     expect(up).toHaveLength(3);
     expect(up.find(u => u.name === 'srv-1')).toBeDefined();
-    expect(up.find(u => u.tier === 'jetson')).toBeDefined();
+    expect(up.find(u => u.tier === 2)).toBeDefined();  // jetson = 2 in Tier enum
     await d.stop();
   });
 

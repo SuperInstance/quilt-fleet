@@ -90,6 +90,26 @@ export class SubscriptionManager extends EventEmitter<SubscriptionEvents> {
     this.reg = registry;
     this.router = router;
     this.transport = transport;
+    // Re-route subscriptions when an instance disappears.
+    registry.on('remove', (inst: { id: string; name: string }) => {
+      for (const sub of this.subs.values()) {
+        if (sub.instanceId !== inst.id || sub.cancelled) continue;
+        const next = this.router!.pick(sub.ref);
+        if (!next || next.id === sub.instanceId) {
+          this.emit('error', new Error(`subscription ${sub.id} has no replacement after ${inst.name} left`));
+          continue;
+        }
+        sub.instanceId = next.id;
+        sub.instanceName = next.name;
+        this.emit('resubscribed', sub.id, next.name);
+        // Restart the stream against the new instance.
+        if (sub.stream && typeof (sub.stream as any).close === 'function') {
+          try { (sub.stream as any).close(); } catch { /* best-effort */ }
+        }
+        sub.stream = null;
+        this.startStream(sub);
+      }
+    });
   }
 
   /* ─── subscribe ──────────────────────────────────────────────────── */

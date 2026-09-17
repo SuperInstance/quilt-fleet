@@ -123,12 +123,17 @@ export class Scaler extends EventEmitter<ScalingEvents> {
 
   /* ─── manual triggers ────────────────────────────────────────────── */
 
-  async spawn(tier: TierName, reason = 'manual', region?: string): Promise<ScalingDecision> {
+  async spawn(
+    tier: TierName,
+    reason = 'manual',
+    region?: string,
+    triggeredBy: SpawnRequest['triggeredBy'] = 'manual',
+  ): Promise<ScalingDecision> {
     if (!this.reg) throw new Error('scaler not bound');
     if (!this.cfg.provisioner) {
       return this.decide({ action: 'noop', tier, reason: 'no provisioner configured' });
     }
-    const req: SpawnRequest = { tier, region, reason, triggeredBy: 'manual' };
+    const req: SpawnRequest = { tier, region, reason, triggeredBy };
     this.emit('spawn', req);
     try {
       await this.cfg.provisioner(req);
@@ -140,14 +145,18 @@ export class Scaler extends EventEmitter<ScalingEvents> {
     return this.decide({ action: 'spawn', tier, reason });
   }
 
-  async destroy(instanceId: string, reason = 'manual'): Promise<ScalingDecision> {
+  async destroy(
+    instanceId: string,
+    reason = 'manual',
+    triggeredBy: DestroyRequest['triggeredBy'] = 'manual',
+  ): Promise<ScalingDecision> {
     if (!this.reg) throw new Error('scaler not bound');
     const inst = this.reg.get(instanceId);
     if (!inst) return this.decide({ action: 'noop', tier: inst?.tierName ?? 'server', reason: 'unknown instance' });
     if (!this.cfg.deprovisioner) {
       return this.decide({ action: 'noop', tier: inst.tierName, reason: 'no deprovisioner' });
     }
-    const req: DestroyRequest = { instanceId, reason, triggeredBy: 'manual' };
+    const req: DestroyRequest = { instanceId, reason, triggeredBy };
     this.emit('destroy', req);
     try {
       await this.cfg.deprovisioner(req);
@@ -202,13 +211,13 @@ export class Scaler extends EventEmitter<ScalingEvents> {
           triggeredBy: 'load',
         };
         this.decide(req);
-        await this.spawn(tier, req.reason);
+        await this.spawn(tier, req.reason, undefined, 'load');
         return;
       }
       if (avgLoad < this.cfg.threshold / 4 && count > (this.cfg.min ?? 1) && this.canAct(tier)) {
         // destroy the lowest-loaded instance
         const target = list.sort((a, b) => a.load - b.load)[0]!;
-        await this.destroy(target.id, `avg=${avgLoad.toFixed(2)}<${(this.cfg.threshold / 4).toFixed(2)}`);
+        await this.destroy(target.id, `avg=${avgLoad.toFixed(2)}<${(this.cfg.threshold / 4).toFixed(2)}`, 'load');
         return;
       }
     }

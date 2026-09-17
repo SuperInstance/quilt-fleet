@@ -130,14 +130,27 @@ describe('Scaler', () => {
     s.bind(reg, health);
     const calls: any[] = [];
     (s as any).cfg.provisioner = async (r: any) => { calls.push(r); };
-    // fake now
-    const realNow = Date.now;
-    Date.now = () => new Date('2026-01-01T00:00:30Z').getTime();
+    // Fake "now" so local hours:minutes == '00:00' in whatever timezone the runner is on.
+    // Use current date but set local time to 00:00.
+    const fakeNow = new Date();
+    fakeNow.setHours(0, 0, 30, 0);
+    const realDate = global.Date;
+    class FakeDate extends realDate {
+      constructor(...args: any[]) {
+        if (args.length === 0) {
+          super(fakeNow.getTime());
+        } else {
+          super(...(args as []));
+        }
+      }
+      static now() { return fakeNow.getTime(); }
+    }
+    (globalThis as any).Date = FakeDate;
     try {
       await (s as any).tickSchedule();
       expect(calls).toHaveLength(1);
     } finally {
-      Date.now = realNow;
+      (globalThis as any).Date = realDate;
     }
   });
 });

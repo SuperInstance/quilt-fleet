@@ -83,7 +83,7 @@ describe('tier adapter subscribe (no network)', () => {
     const first = await it[Symbol.asyncIterator]().next();
     // either it yields nothing, or it closes immediately
     expect(first.done).toBe(true);
-    it.close();
+    await it.return();
   });
 
   it('returns a no-op iterator for cloudflare (no endpoint)', async () => {
@@ -91,6 +91,6 @@ describe('tier adapter subscribe (no network)', () => {
     const it = a.subscribe('http://127.0.0.1:1', 's', 'c');
     const first = await it[Symbol.asyncIterator]().next();
     expect(first.done).toBe(true);
-    it.close();
+    await it.return();
   });
 });
