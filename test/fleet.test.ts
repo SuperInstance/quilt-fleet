@@ -27,6 +27,7 @@ describe('FleetManager', () => {
   });
 
   it('starts and stops', async () => {
+    f.on('start', () => {});  // attach listener; otherwise listenerCount is 0
     await f.start();
     expect(f.listenerCount('start')).toBeGreaterThanOrEqual(1);
     await f.stop();
@@ -96,24 +97,28 @@ describe('FleetManager', () => {
     await f.stop();
   });
 
-  it('scale(auto) returns the scaler', () => {
-    expect(f.scale('auto')).toBe(f.scaler);
+  it('scale(auto) returns the scaler', async () => {
+    expect(await f.scale('auto')).toBe(f.scaler);
   });
 
   it('scale(up) spawns in the requested tier', async () => {
+    await f.start();  // binds scaler to registry
     let spawned: any = null;
     (f.scaler as any).cfg.provisioner = async (req: any) => { spawned = req; };
     await f.scale('up', 4);
     expect(spawned).not.toBeNull();
     expect(spawned.tier).toBe('cloudflare');
+    await f.stop();
   });
 
   it('scale(down) destroys the lowest-loaded healthy instance', async () => {
+    await f.start();  // binds scaler to registry
     f.register({ tier: Tier.Jetson, name: 'j-1', endpoint: 'http://j1', status: 'healthy', load: 0.1 });
     f.register({ tier: Tier.Jetson, name: 'j-2', endpoint: 'http://j2', status: 'healthy', load: 0.9 });
     (f.scaler as any).cfg.deprovisioner = async () => {};
     const d = await f.scale('down');
     expect(d).not.toBeNull();
     expect(f.registry.byInstanceName('j-1')).toBeUndefined();
+    await f.stop();
   });
 });

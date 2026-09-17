@@ -29,13 +29,14 @@ describe('MigrationCoordinator', () => {
     store.set('src', { value: 'hello', version: 7 });
     transport = {
       async freeze(_i, ref)        { frozen.add(ref.instance); return true; },
-      async unfreeze(i, ref)      { frozen.delete(i.id); return true; },
+      async unfreeze(i, ref)      { frozen.delete(i.name); return true; },
       async read(i, ref) {
-        if (ref.instance !== i.name) return null;
-        return store.get(ref.instance === 'src' ? 'src' : 'dest') ?? null;
+        // Real read reads from the *target instance* (i.name), not the source URI.
+        // The source URI's instance (ref.instance) is just the original owner.
+        return store.get(i.name) ?? null;
       },
       async write(i, ref, value, version) {
-        if (ref.instance !== i.name) return false;
+        // Real migration writes to the dest regardless of ref.instance (ref is the source URI).
         store.set(i.name, { value, version });
         return true;
       },

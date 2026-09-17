@@ -99,6 +99,8 @@ describe('Router', () => {
   });
 
   it('returns null when nothing is healthy', () => {
+    // Mark every instance as unreachable (truly unhealthy) — no candidates left
+    for (const inst of reg.all()) reg.update(inst.id, { status: 'unreachable' });
     const r = new Router(reg);
     expect(r.pick({ uri: 'quilt://x/y#z' } as any)).toBeNull();
   });
