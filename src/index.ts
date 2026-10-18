@@ -1,6 +1,6 @@
 /**
  * ════════════════════════════════════════════════════════════════════════════
- *  @quilt/fleet — federation across Quilt tiers
+ *  @superinstance/quilt-fleet — federation across Quilt tiers
  * ════════════════════════════════════════════════════════════════════════════
  *
  *  This is the public entry point of `quilt-fleet`, the 18th Quilt
@@ -31,7 +31,7 @@
  *  ─── Example ──────────────────────────────────────────────────────────────
  *
  *  ```ts
- *  import { FleetManager, Tier } from '@quilt/fleet';
+ *  import { FleetManager, Tier } from '@superinstance/quilt-fleet';
  *
  *  const fleet = new FleetManager({
  *    id: 'main',
@@ -105,4 +105,4 @@ export { runCli } from './cli';
 
 // ─── version ───────────────────────────────────────────────────────────────
 export const VERSION = '0.1.0';
-export const NAME = '@quilt/fleet';
+export const NAME = '@superinstance/quilt-fleet';
