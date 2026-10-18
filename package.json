@@ -1,5 +1,5 @@
 {
-  "name": "@quilt/fleet",
+  "name": "@superinstance/quilt-fleet",
   "version": "0.1.0",
   "description": "Fleet orchestrator for Quilt instances across tiers (ESP32, Jetson, Codespace, Cloudflare, Server)",
   "license": "Apache-2.0",
