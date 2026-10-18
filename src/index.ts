@@ -66,7 +66,9 @@ export type { FleetConfig, FleetEvent } from './fleet';
 
 // ─── subsystems ────────────────────────────────────────────────────────────
 export { Registry } from './registry';
-export type { Instance, InstancePatch, Tier as InstanceTier } from './registry';
+export type { Instance, InstancePatch } from './registry';
+// Tier is declared in ./types, not ./registry -- the re-export below 404'd.
+export type { Tier as InstanceTier } from './types';
 
 export { Discovery } from './discovery';
 export type { DiscoveryConfig, DiscoveryEvent } from './discovery';

@@ -100,6 +100,11 @@ export interface RegisterInput {
   region?: Region;
   zone?: string;
   labels?: Record<string, string>;
+  // The register path reads both of these with `??` defaults, so they are
+  // optional -- but the interface never declared them, and tsc correctly
+  // refused to let it read undeclared properties.
+  status?: 'healthy' | 'degraded' | 'unreachable' | 'unknown';
+  load?: number;
 }
 
 /* ─── query shape ──────────────────────────────────────────────────────── */
